@@ -1,0 +1,200 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dinosaur Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      background-color: #f7f7f7;
+      border: 1px solid #ccc;
+      margin: auto;
+    }
+    #retryButton {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      font-size: 20px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #retryButton:hover {
+      background-color: #218838;
+    }
+  </style>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <a href="simple.html" target="_blank">back to website</a>
+<canvas id="gameCanvas"></canvas>
+<button id="retryButton">Retry</button>
+
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const retryButton = document.getElementById("retryButton");
+
+  // Game dimensions
+  canvas.width = 800;
+  canvas.height = 300;
+
+  // Game variables
+  let gravity = 0.6;
+  let isJumping = false;
+  let isGameOver = false;
+  let score = 0;
+  let obstacles = [];
+  let obstacleSpeed = 5;
+
+  // Dinosaur object
+  const dino = {
+    x: 50,
+    y: canvas.height - 60,
+    width: 40,
+    height: 40,
+    velocityY: 0,
+    draw() {
+      // Draw a simple pixel art bike
+      ctx.fillStyle = "blue"; // Body
+      ctx.fillRect(this.x + 10, this.y + 10, 20, 10);
+      ctx.fillStyle = "black"; // Wheels
+      ctx.beginPath();
+      ctx.arc(this.x + 10, this.y + 30, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(this.x + 30, this.y + 30, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "red"; // Head
+      ctx.fillRect(this.x + 15, this.y, 10, 10);
+    },
+    update() {
+      if (isJumping) {
+        this.velocityY = -10;
+        isJumping = false;
+      }
+      this.velocityY += gravity;
+      this.y += this.velocityY;
+
+      // Prevent falling off canvas
+      if (this.y + this.height >= canvas.height) {
+        this.y = canvas.height - this.height;
+        this.velocityY = 0;
+      }
+
+      this.draw();
+    },
+  };
+
+  // Obstacle object
+  class Obstacle {
+    constructor() {
+      this.width = 20 + Math.random() * 30;
+      this.height = 20 + Math.random() * 30;
+      this.x = canvas.width;
+      this.y = canvas.height - this.height;
+      this.speed = obstacleSpeed;
+    }
+    draw() {
+      ctx.fillStyle = "red";
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    update() {
+      this.x -= this.speed;
+      this.draw();
+    }
+  }
+
+  // Game functions
+  function generateObstacle() {
+    if (!isGameOver) {
+      obstacles.push(new Obstacle());
+    }
+  }
+
+  function detectCollision(dino, obstacle) {
+    return (
+      dino.x < obstacle.x + obstacle.width &&
+      dino.x + dino.width > obstacle.x &&
+      dino.y < obstacle.y + obstacle.height &&
+      dino.y + dino.height > obstacle.y
+    );
+  }
+
+  function resetGame() {
+    isGameOver = false;
+    score = 0;
+    obstacles = [];
+    obstacleSpeed = 5;
+    dino.y = canvas.height - dino.height;
+    dino.velocityY = 0;
+    retryButton.style.display = "none";
+    updateGame();
+  }
+
+  function updateGame() {
+    if (isGameOver) {
+      ctx.font = "30px Arial";
+      ctx.fillText("Game Over", canvas.width / 2 - 70, canvas.height / 2);
+      retryButton.style.display = "block";
+      return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    dino.update();
+
+    obstacles.forEach((obstacle, index) => {
+      obstacle.update();
+
+      // Check collision
+      if (detectCollision(dino, obstacle)) {
+        isGameOver = true;
+      }
+
+      // Remove obstacles that are off-screen
+      if (obstacle.x + obstacle.width < 0) {
+        obstacles.splice(index, 1);
+        score++;
+
+        // Increase speed every 5 points
+        if (score % 5 === 0) {
+          obstacleSpeed += 0.5;
+        }
+      }
+    });
+
+    ctx.font = "20px Arial";
+    ctx.fillText(`Score: ${score}`, 10, 20);
+
+    requestAnimationFrame(updateGame);
+  }
+
+  // Event listener for jumping
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && dino.y + dino.height === canvas.height) {
+      isJumping = true;
+    }
+  });
+
+  // Retry button functionality
+  retryButton.addEventListener("click", resetGame);
+
+  // Start the game
+  setInterval(generateObstacle, 2000);
+  updateGame();
+</script>
+</body>
+</html>
